@@ -1,0 +1,84 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Use this template to deploy EC2 instance that can pull data from s3'
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+    ConstraintDescription: must be the name of an existing EC2 KeyPair.
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t3.small
+    ConstraintDescription: must be a valid EC2 instance type.
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroups:
+      - Ref: InstanceSecurityGroup
+      KeyName:
+        Ref: KeyName
+      IamInstanceProfile:
+        Ref: InstanceProfile
+      ImageId: ami-0be2609ba883822ec
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '0'
+        ToPort: '65535'
+        CidrIp: '0.0.0.0/0'
+
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          Action: sts:AssumeRole
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+        Version: "2012-10-17"
+      Policies:
+        - PolicyName: s3-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Resource: '*'
+                Action: '*'
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: InstanceRole
+
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value:
+      Ref: EC2Instance
+  AZ:
+    Description: Availability Zone of the newly created EC2 instance
+    Value:
+      Fn::GetAtt:
+      - EC2Instance
+      - AvailabilityZone
+  PublicDNS:
+    Description: Public DNSName of the newly created EC2 instance
+    Value:
+      Fn::GetAtt:
+      - EC2Instance
+      - PublicDnsName
+  PublicIP:
+    Description: Public IP address of the newly created EC2 instance
+    Value:
+      Fn::GetAtt:
+      - EC2Instance
+      - PublicIp
